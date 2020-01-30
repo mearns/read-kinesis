@@ -17,6 +17,9 @@
     "node": "^12.14.1"
   },
   "main": "src/index.js",
+  "bin": {
+    "kinesis-reader": "./src/index.js"
+  },
   "files": [
     "src/**/*"
   ],
