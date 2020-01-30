@@ -79,3 +79,5 @@ in the AWS documentation for details. Here's a quick summary of your options (in
 
 If you specify the `--profile` option to the command, it will use the specified profile from your
 credentials file.
+
+You can also use the `--assume` option to specify the ARN of an IAM role to assume.

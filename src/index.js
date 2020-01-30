@@ -4,20 +4,46 @@ const yargs = require("yargs");
 const AWS = require("aws-sdk");
 const { CallerError } = require("./error");
 const { getFormatterOptions, getFormatter } = require("./formatter");
+const withRetry = require("./retry");
 
 function getCreds(args) {
     if (args.profile) {
-        const creds = new AWS.SharedIniFileCredentials({
+        const {
+            accessKeyId,
+            secretAccessKey,
+            sessionToken
+        } = new AWS.SharedIniFileCredentials({
             profile: args.profile
         });
-        const { accessKeyId, secretAccessKey, sessionToken } = creds;
         return { accessKeyId, secretAccessKey, sessionToken };
     }
     return {};
 }
 
+async function optionallyAssumeRole(args, baseCreds) {
+    if (args.assume) {
+        const sts = new AWS.STS({
+            apiVersion: "2011-06-15",
+            region: args.region,
+            ...baseCreds
+        });
+        const { accessKeyId, secretAccessKey, sessionToken } = (await withRetry(
+            () =>
+                sts
+                    .assumeRole({
+                        RoleArn: args.assume,
+                        RoleSessionName: `kinesis-reader-${new Date().getTime()}`
+                    })
+                    .promise()
+        )).Credentials;
+        return { accessKeyId, secretAccessKey, sessionToken };
+    }
+    return baseCreds;
+}
+
 async function dumpStream(args) {
-    const creds = getCreds(args);
+    const baseCreds = getCreds(args);
+    const creds = await optionallyAssumeRole(args, baseCreds);
     const kinesis = new AWS.Kinesis({
         apiVersion: "2013-12-02",
         region: args.region,
@@ -232,6 +258,10 @@ function parseArgs() {
         .option("profile", {
             description:
                 "Use the specified profile from your shared credentials file (typically ~/.aws/credentials) for AWS credentials"
+        })
+        .option("assume", {
+            description:
+                "Assume the AWS role specified by ARN for reading from Kinesis"
         })
         .option("debug", {
             hidden: true,
