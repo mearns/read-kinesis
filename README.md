@@ -53,13 +53,18 @@ is utf8 encoded text, and attempts to decode it as such. You can change the beha
 ## Checkpoints
 
 A checkpoint describes where the reader leftoff in a particular shard (in a particular stream).
-You can add the `--checkpoint-file` option to specify the name of a file where checkpoints are
-stored. If the file already exists, then checkpoints will be loaded from it and the reader will
-pick up from there. If the checkpoint file doesn't exist, it will read from the trim horizon
-(i.e., the oldest record still in the shard).
+You can add the `--checkpoint` option to specify that checkpoints should be used. When given,
+checkpoints are loaded from the checkpoint file, if it exists (the default checkpoint file is
+`.checkpoints` in the current directory, you can use the `--checkpoint-file` option to specify
+an alternate). If no checkpoints are found for a shard, it starts at the trim horizon (i.e.,
+the oldest record currently in the shard).
 
-If the `--checkpoint-file` option is given, the updated checkpoints will be _appended_ to it
-after successful completion. If you do this a lot, the file could potentially get really large.
+After reading completes successfully, if the `--checkpoint` option is given, then updated
+checkpoints are appended to the checkpoint file, indicating the furthest that the command read
+in each shard so that subsequent commands can pick up where it left off.
+
+The checkpoint file is appended to by default, so it could potentially get really big. Use
+the `--trim-checkpoints` option to overwrite the entire file, instead.
 
 ## Credentials / Authorization
 
