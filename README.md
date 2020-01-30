@@ -1,17 +1,17 @@
-# kinesis-reader
+# read-kinesis
 
 Read records from the shards of an AWS Kinesis stream and dump them to standard output.
 
 ## Usage
 
 ```console
-> ./kinesis-reader.sh dump <stream-name> [options]
+> read-kinesis dump <stream-name> [options]
 
 > # Read from all shards in the specified stream (based on list-shards)
-> ./kinesis-reader.sh dump $STREAM_NAME --all
+> read-kinesis dump $STREAM_NAME --all
 
 > # Read from specified shards in the stream
-> ./kinesis-reader.sh dump $STREAM_NAME --shard shardId-000000000000 --shard shardId-000000000001
+> read-kinesis dump $STREAM_NAME --shard shardId-000000000000 --shard shardId-000000000001
 ```
 
 ## Output
@@ -81,3 +81,19 @@ If you specify the `--profile` option to the command, it will use the specified 
 credentials file.
 
 You can also use the `--assume` option to specify the ARN of an IAM role to assume.
+
+## CLI Options
+
+| Option                                  | Description                                                                                                                                                                                                |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `-r REGION`<br />`--region REGION`      | The AWS region of the stream. **required**                                                                                                                                                                 |
+| `-s SHARD-ID`<br />`--shard SHARD-ID`   | Specify the name of the shard to read from. Give this option multipe times to read from multiple shards.                                                                                                   |
+| `-a`<br />`--all`                       | Read from all shards in the given stream                                                                                                                                                                   |
+| `-c`<br />`--checkpoint`                | Read and use initial checkpoints from file, if present. Write checkpoints to file if everything completes successful. Use the --checkpoint-file to specify the file to use, the default is `.checkpoints`. |
+| `--profile`                             | Use the specified profile from your shared credentials file (typically ~/.aws/credentials) for AWS credentials.                                                                                            |
+| `--assume`                              | Assume the AWS role specified by ARN for reading from Kinesis.                                                                                                                                             |
+| `--json`                                | Output the records in pretty-printed JSON. The default is to use console.log to format the output                                                                                                          |
+| `--jsonl`<br />`--json-lines`           | Output the records in JSON lines, one line per record                                                                                                                                                      |
+| `--checkpoint-file FILE`                | Specify the path to the checkpoint file to use. Only relevant if the `--checkpoint` option is given. (_default:_ `.checkpoints`)                                                                           |
+| `--trim-checkpoints`                    | Overwrite the contents of the checkpoint-file instead of appending to it.                                                                                                                                  |
+| `-d FORMAT`<br />`--data-format FORMAT` | Specifies how to handle the data payload of kinesis records. See "Data Format" section above                                                                                                               |
