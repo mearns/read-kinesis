@@ -1,24 +1,24 @@
 {
-  "name": "kinesis-reader",
-  "version": "0.1.0",
+  "name": "read-kinesis",
+  "version": "0.1.1",
   "description": "A simple command line utility for reading records from a kinesis stream",
   "keywords": [],
   "author": "Brian Mearns <mearns.b@gmail.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mearns/kinesis-reader.git"
+    "url": "git+https://github.com/mearns/read-kinesis.git"
   },
   "bugs": {
-    "url": "https://github.com/mearns/kinesis-reader/issues"
+    "url": "https://github.com/mearns/read-kinesis/issues"
   },
-  "homepage": "https://github.com/mearns/kinesis-reader#readme",
+  "homepage": "https://github.com/mearns/read-kinesis#readme",
   "engines": {
     "node": "^12.14.1"
   },
   "main": "src/index.js",
   "bin": {
-    "kinesis-reader": "./src/index.js"
+    "read-kinesis": "./src/index.js"
   },
   "files": [
     "src/**/*"
