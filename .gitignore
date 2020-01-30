@@ -1,4 +1,5 @@
 builds/
+.checkpoints
 
 # Logs
 logs

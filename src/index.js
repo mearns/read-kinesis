@@ -5,10 +5,23 @@ const AWS = require("aws-sdk");
 const { CallerError } = require("./error");
 const { getFormatterOptions, getFormatter } = require("./formatter");
 
+function getCreds(args) {
+    if (args.profile) {
+        const creds = new AWS.SharedIniFileCredentials({
+            profile: args.profile
+        });
+        const { accessKeyId, secretAccessKey, sessionToken } = creds;
+        return { accessKeyId, secretAccessKey, sessionToken };
+    }
+    return {};
+}
+
 async function dumpStream(args) {
+    const creds = getCreds(args);
     const kinesis = new AWS.Kinesis({
         apiVersion: "2013-12-02",
-        region: args.region
+        region: args.region,
+        ...creds
     });
     const shardIds = args.all ? await listShards(kinesis, args) : args.shard;
     if (!shardIds || !shardIds.length) {
@@ -28,21 +41,22 @@ async function dumpStream(args) {
             )
         )
     );
-    if (args.checkpointFile) {
+    if (args.checkpoint) {
         const time = new Date().toISOString();
-        await appendFile(
-            args.checkpointFile,
-            newCheckpoints
-                .map(cp => ({ time, ...cp }))
-                .map(cp => `${JSON.stringify(cp)}\n`)
-                .join(""),
-            "utf8"
-        );
+        const content = newCheckpoints
+            .map(cp => ({ time, ...cp }))
+            .map(cp => `${JSON.stringify(cp)}\n`)
+            .join("");
+        if (args.trimCheckpoints) {
+            await writeFile(args.checkpointFile, content, "utf8");
+        } else {
+            await appendFile(args.checkpointFile, content, "utf8");
+        }
     }
 }
 
 async function getCheckpoints(args) {
-    if (args.checkpointFile) {
+    if (args.checkpoint) {
         let content;
         try {
             content = await readFile(args.checkpointFile, "utf8");
@@ -73,6 +87,18 @@ async function getCheckpoints(args) {
 function appendFile(...args) {
     return new Promise((resolve, reject) => {
         fs.appendFile(...args, (error, data) => {
+            if (error) {
+                reject(error);
+            } else {
+                resolve(data);
+            }
+        });
+    });
+}
+
+function writeFile(...args) {
+    return new Promise((resolve, reject) => {
+        fs.writeFile(...args, (error, data) => {
             if (error) {
                 reject(error);
             } else {
@@ -158,7 +184,7 @@ function parseArgs() {
                     })
                     .option("a", {
                         alias: "all",
-                        conflicts: "s",
+                        conflicts: "shard",
                         type: "boolean",
                         description: "Read from all shards in the given stream"
                     })
@@ -175,10 +201,23 @@ function parseArgs() {
                         conflicts: "json"
                     })
                     .option("c", {
-                        alias: "checkpoint-file",
+                        alias: "checkpoint",
+                        type: "boolean",
                         description:
-                            "Read and use initial checkpoints from the given file, if present. Write checkpoints to the specified file if everything completes successful.",
-                        type: "string"
+                            "Read and use initial checkpoints from file, if present. Write checkpoints to file if everything completes successful. " +
+                            'Use the --checkpoint-file to specify the file to use, the default is ".checkpoints".'
+                    })
+                    .option("checkpoint-file", {
+                        description:
+                            "Specify the path to the checkpoint file to use. Only relevant if the --checkpoint option is given.",
+                        type: "string",
+                        default: ".checkpoints"
+                    })
+                    .option("trim-checkpoints", {
+                        description:
+                            "If set, overwrite the contents of the checkpoint-file instead of appending to it.",
+                        type: "boolean",
+                        implies: "checkpoint"
                     })
                     .option("d", {
                         alias: "data-format",
@@ -190,6 +229,10 @@ function parseArgs() {
                     })
                     .strict()
         )
+        .option("profile", {
+            description:
+                "Use the specified profile from your shared credentials file (typically ~/.aws/credentials) for AWS credentials"
+        })
         .option("debug", {
             hidden: true,
             type: "boolean"
