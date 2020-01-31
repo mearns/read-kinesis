@@ -1,6 +1,6 @@
 {
   "name": "read-kinesis",
-  "version": "0.2.0-dev",
+  "version": "0.3.0",
   "description": "A simple command line utility for reading records from a kinesis stream",
   "keywords": [],
   "author": "Brian Mearns <mearns.b@gmail.com>",
@@ -59,6 +59,8 @@
   },
   "dependencies": {
     "aws-sdk": "^2.610.0",
+    "date-fns": "^2.9.0",
+    "parse-human-relative-time": "^2.0.2",
     "yargs": "^15.1.0"
   }
 }

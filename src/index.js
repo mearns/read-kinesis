@@ -7,6 +7,8 @@ const AWS = require("aws-sdk");
 const { CallerError } = require("./error");
 const { getFormatterOptions, getFormatter } = require("./formatter");
 const withRetry = require("./retry");
+const dateFns = require("date-fns");
+const parseHumanTime = require("parse-human-relative-time/date-fns")(dateFns);
 
 let logger = silentLogger;
 
@@ -65,6 +67,10 @@ async function dumpStream(args) {
     }
     logger("Will read from the following shards:", shardIds);
 
+    if (args.timestamp) {
+        args.timestamp = parseTimestamp(args.timestamp);
+        logger("Will read starting from", args.timestamp);
+    }
     const checkpointProvider = args.timestamp
         ? () => ({
               timestamp: args.timestamp
@@ -96,6 +102,20 @@ async function dumpStream(args) {
         } else {
             await appendFile(args.checkpointFile, content, "utf8");
         }
+    }
+}
+
+function parseTimestamp(timestamp) {
+    const d = new Date(timestamp);
+    if (!isNaN(d.getTime())) {
+        return d;
+    }
+    try {
+        return parseHumanTime(timestamp);
+    } catch (error) {
+        throw new CallerError(`Failed to parse timestamp: ${error.message}`, {
+            cause: error
+        });
     }
 }
 
