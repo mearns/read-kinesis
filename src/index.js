@@ -12,14 +12,11 @@ let logger = silentLogger;
 
 function getCreds(args) {
     if (args.profile) {
-        const {
-            AccessKeyId: accessKeyId,
-            SecretAccessKey: secretAccessKey,
-            SessionToken: sessionToken
-        } = new AWS.SharedIniFileCredentials({
+        const creds = new AWS.SharedIniFileCredentials({
             profile: args.profile
         });
         logger(`Loaded credentials for profile ${args.profile}`);
+        const { accessKeyId, secretAccessKey, sessionToken } = creds;
         return { accessKeyId, secretAccessKey, sessionToken };
     }
     return {};
