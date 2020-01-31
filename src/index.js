@@ -68,7 +68,14 @@ async function dumpStream(args) {
     }
     logger("Will read from the following shards:", shardIds);
 
-    const checkpoints = await getCheckpoints(args);
+    const checkpointProvider = args.timestamp
+        ? () => ({
+              timestamp: args.timestamp
+          })
+        : await getCheckpoints(args).then(
+              checkpoints => (streamName, shardId) =>
+                  checkpoints[`${streamName}:${shardId}`]
+          );
     const streamName = args["stream-name"];
     const newCheckpoints = await Promise.all(
         shardIds.map(shardId =>
@@ -77,7 +84,7 @@ async function dumpStream(args) {
                 args,
                 getFormatter(args.dataFormat),
                 shardId,
-                checkpoints[`${streamName}:${shardId}`]
+                checkpointProvider(streamName, shardId)
             )
         )
     );
@@ -251,6 +258,14 @@ function parseArgs() {
                         description:
                             "Read and use initial checkpoints from file, if present. Write checkpoints to file if everything completes successful. " +
                             'Use the --checkpoint-file to specify the file to use, the default is ".checkpoints".'
+                    })
+                    .option("t", {
+                        alias: "timestamp",
+                        type: "string",
+                        description:
+                            "Specify a timestamp to start reading from. If you are using --checkpoints, this will ignore any " +
+                            "existing checkpoints, but will still update checkpoints after completion. This could cause you to skip " +
+                            "over records in between your previous checkpoint and the given timestamp."
                     })
                     .option("checkpoint-file", {
                         description:

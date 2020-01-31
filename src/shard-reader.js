@@ -152,14 +152,27 @@ class KinesisShard {
         return this.requestShardIterator("TRIM_HORIZON");
     }
 
-    getShardIteratorFromCheckpoint({ shardIterator, lastReadSequenceNumber }) {
+    getShardIteratorFromTimestamp(timestamp) {
+        return this.requestShardIterator("AT_TIMESTAMP", undefined, timestamp);
+    }
+
+    getShardIteratorFromCheckpoint({
+        shardIterator,
+        lastReadSequenceNumber,
+        timestamp
+    }) {
         // If we already have a shard iterator, use it.
         if (shardIterator) {
             return shardIterator;
         }
-        return this.getShardIteratorFromLastReadSequenceNumber(
-            lastReadSequenceNumber
-        );
+        if (lastReadSequenceNumber) {
+            return this.getShardIteratorFromLastReadSequenceNumber(
+                lastReadSequenceNumber
+            );
+        } else if (timestamp) {
+            return this.getShardIteratorFromTimestamp(timestamp);
+        }
+        return this.requestShardIterator("TRIM_HORIZON");
     }
 
     /**
@@ -167,7 +180,7 @@ class KinesisShard {
      * @param {string} iteratorType
      * @param {string} sequenceNumber
      */
-    requestShardIterator(iteratorType, sequenceNumber) {
+    requestShardIterator(iteratorType, sequenceNumber, timestamp) {
         return withRetry(
             async () =>
                 (await this.kinesis
@@ -175,7 +188,8 @@ class KinesisShard {
                         StreamName: this.streamName,
                         ShardId: this.shardId,
                         ShardIteratorType: iteratorType,
-                        StartingSequenceNumber: sequenceNumber
+                        StartingSequenceNumber: sequenceNumber,
+                        Timestamp: timestamp
                     })
                     .promise()).ShardIterator
         );
