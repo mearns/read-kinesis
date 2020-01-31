@@ -8,15 +8,18 @@ const { CallerError } = require("./error");
 const { getFormatterOptions, getFormatter } = require("./formatter");
 const withRetry = require("./retry");
 
+let logger = silentLogger;
+
 function getCreds(args) {
     if (args.profile) {
         const {
-            accessKeyId,
-            secretAccessKey,
-            sessionToken
+            AccessKeyId: accessKeyId,
+            SecretAccessKey: secretAccessKey,
+            SessionToken: sessionToken
         } = new AWS.SharedIniFileCredentials({
             profile: args.profile
         });
+        logger(`Loaded credentials for profile ${args.profile}`);
         return { accessKeyId, secretAccessKey, sessionToken };
     }
     return {};
@@ -39,6 +42,7 @@ async function optionallyAssumeRole(args, baseCreds) {
                     })
                     .promise()
             )).Credentials;
+            logger(`Assumed role: ${roleArn}`);
             const {
                 AccessKeyId: accessKeyId,
                 SecretAccessKey: secretAccessKey,
@@ -62,6 +66,7 @@ async function dumpStream(args) {
     if (!shardIds || !shardIds.length) {
         throw new CallerError("No shard IDs specified");
     }
+    logger("Will read from the following shards:", shardIds);
 
     const checkpoints = await getCheckpoints(args);
     const streamName = args["stream-name"];
@@ -170,6 +175,11 @@ async function dumpShard(kinesis, args, formatter, shardId, checkpoint) {
     while (reader.next) {
         reader = await reader.next();
         const records = reader.records;
+        logger("Got one batch of records", {
+            recordCount: records.length,
+            shardId,
+            streamName
+        });
         records.forEach(record => {
             const output = {
                 _shardId: shardId,
@@ -275,6 +285,11 @@ function parseArgs() {
             type: "string",
             array: true
         })
+        .option("verbose", {
+            type: "boolean",
+            alias: "v",
+            description: "Output messages to STDERR about what's happening"
+        })
         .option("debug", {
             hidden: true,
             type: "boolean"
@@ -290,6 +305,7 @@ function parseArgs() {
 
 async function main() {
     const args = parseArgs();
+    logger = args.verbose ? verboseLogger : silentLogger;
     args._ = Array.isArray(args._) ? args._ : [args._];
     const [command] = args._;
     try {
@@ -312,5 +328,11 @@ async function main() {
         process.exitCode = 1;
     }
 }
+
+function verboseLogger(message, ...meta) {
+    console.error(message, ...meta);
+}
+
+function silentLogger() {}
 
 main();

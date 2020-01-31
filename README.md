@@ -14,6 +14,15 @@ Read records from the shards of an AWS Kinesis stream and dump them to standard 
 > read-kinesis dump $STREAM_NAME --shard shardId-000000000000 --shard shardId-000000000001
 ```
 
+## Long Wait
+
+If you have a very sparse stream (relatively few records on it), it might take a long time to start getting
+any records, or even just to determine there are no records. This has to do with the way Kinesis timeslices
+the stream and iterates over timeslices. If you don't have any checkpoints, or your check point is from a
+long time ago, the reader may have to read over a bunch of empty timeslices before reaching any records
+or the end of the stream. You can add the `--verbose` flag to get some status output to STDERR to see
+what's going on.
+
 ## Output
 
 For each record read from Kinesis, the record is presented with all of it's fields and some additional
