@@ -1,6 +1,6 @@
 {
   "name": "read-kinesis",
-  "version": "0.1.2-dev",
+  "version": "0.2.0",
   "description": "A simple command line utility for reading records from a kinesis stream",
   "keywords": [],
   "author": "Brian Mearns <mearns.b@gmail.com>",

@@ -24,21 +24,28 @@ function getCreds(args) {
 
 async function optionallyAssumeRole(args, baseCreds) {
     if (args.assume) {
-        const sts = new AWS.STS({
-            apiVersion: "2011-06-15",
-            region: args.region,
-            ...baseCreds
-        });
-        const { accessKeyId, secretAccessKey, sessionToken } = (await withRetry(
-            () =>
+        return args.assume.reduce(async (promiseForPreviousCreds, roleArn) => {
+            const prevCreds = await promiseForPreviousCreds;
+            const sts = new AWS.STS({
+                apiVersion: "2011-06-15",
+                region: args.region,
+                ...prevCreds
+            });
+            const creds = (await withRetry(() =>
                 sts
                     .assumeRole({
-                        RoleArn: args.assume,
+                        RoleArn: roleArn,
                         RoleSessionName: `kinesis-reader-${new Date().getTime()}`
                     })
                     .promise()
-        )).Credentials;
-        return { accessKeyId, secretAccessKey, sessionToken };
+            )).Credentials;
+            const {
+                AccessKeyId: accessKeyId,
+                SecretAccessKey: secretAccessKey,
+                SessionToken: sessionToken
+            } = creds;
+            return { accessKeyId, secretAccessKey, sessionToken };
+        }, Promise.resolve(baseCreds));
     }
     return baseCreds;
 }
@@ -263,7 +270,10 @@ function parseArgs() {
         })
         .option("assume", {
             description:
-                "Assume the AWS role specified by ARN for reading from Kinesis"
+                "Assume the AWS role specified by this ARN for reading from Kinesis. You can specify this option multiple " +
+                "times to specify a chain of roles that will be assumed.",
+            type: "string",
+            array: true
         })
         .option("debug", {
             hidden: true,

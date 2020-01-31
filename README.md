@@ -80,7 +80,9 @@ in the AWS documentation for details. Here's a quick summary of your options (in
 If you specify the `--profile` option to the command, it will use the specified profile from your
 credentials file.
 
-You can also use the `--assume` option to specify the ARN of an IAM role to assume.
+You can also use the `--assume` option to specify the ARN of an IAM role to assume. Specify the option multiple times to specify a chain of
+roles that should be assumed. For instance, if you're authorized to assume role A but not role B, but role A is authorized to assume role B,
+you can use role B with `--assume A --assume B`.
 
 ## CLI Options
 
@@ -91,7 +93,7 @@ You can also use the `--assume` option to specify the ARN of an IAM role to assu
 | `-a`<br />`--all`                       | Read from all shards in the given stream                                                                                                                                                                   |
 | `-c`<br />`--checkpoint`                | Read and use initial checkpoints from file, if present. Write checkpoints to file if everything completes successful. Use the --checkpoint-file to specify the file to use, the default is `.checkpoints`. |
 | `--profile`                             | Use the specified profile from your shared credentials file (typically ~/.aws/credentials) for AWS credentials.                                                                                            |
-| `--assume`                              | Assume the AWS role specified by ARN for reading from Kinesis.                                                                                                                                             |
+| `--assume`                              | Assume the AWS role specified by this ARN for reading from Kinesis. You can specify this option multiple times to specify a chain of roles that will be assumed                                            |
 | `--json`                                | Output the records in pretty-printed JSON. The default is to use console.log to format the output                                                                                                          |
 | `--jsonl`<br />`--json-lines`           | Output the records in JSON lines, one line per record                                                                                                                                                      |
 | `-d FORMAT`<br />`--data-format FORMAT` | Specifies how to handle the data payload of kinesis records. See "Data Format" section above                                                                                                               |
