@@ -35,7 +35,8 @@ async function withRetryRecursive(
                     f,
                     allErrors,
                     retries - 1,
-                    backoff + backoff
+                    backoff + backoff,
+                    backoffDither
                 );
             }
             throw new OutOfRetriesError(error, prevErrors);
