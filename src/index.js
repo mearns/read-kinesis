@@ -220,6 +220,22 @@ async function dumpShard(kinesis, args, formatter, shardId, checkpoint) {
                 console.log(output);
             }
         });
+        if (args.stopAfter && records.length) {
+            const lastRecord = records[records.length - 1];
+            const lastTimeStamp = new Date(
+                lastRecord.ApproximateArrivalTimestamp
+            );
+            if (new Date(lastTimeStamp) > args.stopAfter) {
+                logger(
+                    `Terminating dump of shard ${shardId} due to "stop-after" condition`,
+                    {
+                        stopAfter: args.stopAfter,
+                        approximateArrivalTimestamp: new Date(lastTimeStamp)
+                    }
+                );
+                break;
+            }
+        }
     }
     return {
         streamName,
@@ -303,6 +319,13 @@ function parseArgs() {
                         default: "utf-8",
                         description:
                             "Specifies how to handle the data payload of kinesis records."
+                    })
+                    .options("stop-after", {
+                        coerce: parseTimestamp,
+                        description:
+                            "Optionally specify a timestamp to stop reading after. Applies individually to each shard read. " +
+                            "Reader will read and output an entire batch of records at a time as usual, but will terminate once it gets " +
+                            "a batch whose last record is greater than the specified timestamp."
                     })
                     .strict()
         )
