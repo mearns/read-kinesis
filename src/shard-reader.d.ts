@@ -28,6 +28,8 @@ export interface ShardReadCursor {
     /** The checkpoint at the end of the given set of records. */
     checkpoint: Checkpoint;
 
+    millisBehindLatest: number;
+
     /**
      * The function to get the next (advanced) cursor. Present if and only if the cursor
      * has not reached the end of the shard.

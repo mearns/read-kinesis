@@ -59,6 +59,7 @@ async function readAndAdvance(shard, lastCheckpoint = {}) {
     return {
         records: getRecordsResponse.Records,
         checkpoint: nextCheckpoint,
+        millisBehindLatest: getRecordsResponse.MillisBehindLatest,
         ...(moreToRead(getRecordsResponse) && {
             next: () => readAndAdvance(shard, nextCheckpoint)
         })
@@ -220,7 +221,7 @@ function last(ari) {
 
 /**
  * @typedef {import("./shard-reader").Checkpoint} Checkpoint
- * @typedef {import("./kinesis-reader").ShardReadCursor} ShardReadCursor
- * @typedef {import("./kinesis-reader").InitialShardReadCursor} InitialShardReadCursor
- * @typedef {import("./kinesis-reader").ShardReadCursorAdvance} ShardReadCursorAdvance
+ * @typedef {import("./shard-reader").ShardReadCursor} ShardReadCursor
+ * @typedef {import("./shard-reader").InitialShardReadCursor} InitialShardReadCursor
+ * @typedef {import("./shard-reader").ShardReadCursorAdvance} ShardReadCursorAdvance
  */

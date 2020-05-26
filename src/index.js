@@ -9,6 +9,8 @@ const { getFormatterOptions, getFormatter } = require("./formatter");
 const withRetry = require("./retry");
 const dateFns = require("date-fns");
 const parseHumanTime = require("parse-human-relative-time/date-fns")(dateFns);
+const chalk = require("chalk");
+const humanizeDuration = require("humanize-duration");
 
 let logger = silentLogger;
 
@@ -53,14 +55,44 @@ async function optionallyAssumeRole(args, baseCreds) {
     return baseCreds;
 }
 
-async function dumpStream(args) {
+async function checkIterator(args) {
+    const kinesis = await getKinesisInstance(args);
+    try {
+        const response = await kinesis
+            .getRecords({
+                ShardIterator: args.shardIterator,
+                Limit: 1
+            })
+            .promise();
+        console.log(
+            chalk.green(
+                `ShardIterator was valid and not-expired, and is approximately ${humanizeDuration(
+                    response.MillisBehindLatest
+                )} behind the tip of the stream.`
+            )
+        );
+    } catch (error) {
+        if (error.code === "ExpiredIteratorException") {
+            console.error(chalk.red(error.message));
+            process.exitCode = 1;
+            return;
+        }
+        throw error;
+    }
+}
+
+async function getKinesisInstance(args) {
     const baseCreds = getCreds(args);
     const creds = await optionallyAssumeRole(args, baseCreds);
-    const kinesis = new AWS.Kinesis({
+    return new AWS.Kinesis({
         apiVersion: "2013-12-02",
         region: args.region,
         ...creds
     });
+}
+
+async function dumpStream(args) {
+    const kinesis = await getKinesisInstance(args);
     const shardIds = args.all ? await listShards(kinesis, args) : args.shard;
     if (!shardIds || !shardIds.length) {
         throw new CallerError("No shard IDs specified");
@@ -202,7 +234,8 @@ async function dumpShard(kinesis, args, formatter, shardId, checkpoint) {
         logger("Got one batch of records", {
             recordCount: records.length,
             shardId,
-            streamName
+            streamName,
+            millisBehindLatest: reader.millisBehindLatest
         });
         records.forEach(record => {
             const output = {
@@ -247,18 +280,22 @@ async function dumpShard(kinesis, args, formatter, shardId, checkpoint) {
 function parseArgs() {
     return yargs
         .command(
+            "check-iterator <shard-iterator>",
+            "Check an existing shard iterator to see if it is expired or not and how far behind latest it is",
+            _yargs =>
+                _yargs
+                    .positional("shard-iterator", {
+                        description: "The shard iterator to check"
+                    })
+                    .strict()
+        )
+        .command(
             "dump <stream-name>",
             "Dump records from the specified stream",
             _yargs =>
                 _yargs
                     .positional("stream-name", {
                         description: "The name of the stream to read"
-                    })
-                    .option("r", {
-                        alias: "region",
-                        required: true,
-                        type: "string",
-                        description: "The AWS region of the stream"
                     })
                     .option("s", {
                         alias: "shard",
@@ -329,6 +366,12 @@ function parseArgs() {
                     })
                     .strict()
         )
+        .option("r", {
+            alias: "region",
+            required: true,
+            type: "string",
+            description: "The AWS region of the stream"
+        })
         .option("profile", {
             description:
                 "Use the specified profile from your shared credentials file (typically ~/.aws/credentials) for AWS credentials"
@@ -367,6 +410,10 @@ async function main() {
         switch (command) {
             case "dump":
                 await dumpStream(args);
+                return;
+
+            case "check-iterator":
+                await checkIterator(args);
                 return;
 
             default:
